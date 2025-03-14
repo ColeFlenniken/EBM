@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -17,9 +20,15 @@ type bookmark struct {
 }
 
 type Model struct {
+	// -- table of bookmarks
 	bookmarks []bookmark
 	cursor    int
 	table     table.Model
+	//-- New Bookmark text input
+	focusIndex int
+	inputs     []textinput.Model
+	cursorMode cursor.Mode
+	addToggle  bool
 }
 
 var baseStyle = lipgloss.NewStyle().
@@ -70,44 +79,87 @@ func initialModel() Model {
 		Bold(false)
 	t.SetStyles(s)
 
+	var inputs []textinput.Model
+	var ti = textinput.New()
+	ti.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	ti.CharLimit = 20
+	ti.Placeholder = "Name"
+	ti.Focus()
+
+	inputs = append(inputs, ti)
+	ti = textinput.New()
+	ti.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	ti.CharLimit = 20
+	ti.Placeholder = "Path"
+	inputs = append(inputs, ti)
+
 	return Model{
-		bookmarks: bookmarks,
-		cursor:    0,
-		table:     t,
+		bookmarks:  bookmarks,
+		cursor:     0,
+		table:      t,
+		inputs:     inputs,
+		focusIndex: 0,
+		addToggle:  false,
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return textinput.Blink
+}
+
+func (m *Model) updateInputs(msg tea.Msg) tea.Cmd {
+	cmds := make([]tea.Cmd, len(m.inputs))
+
+	// Only text inputs with Focus() set will respond, so it's safe to simply
+	// update all of them here without any further logic.
+	for i := range m.inputs {
+		m.inputs[i], cmds[i] = m.inputs[i].Update(msg)
+	}
+
+	return tea.Batch(cmds...)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-
+	var cmdAdd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
 			if m.table.Focused() {
 				m.table.Blur()
+				m.inputs[0].Focus()
 			} else {
 				m.table.Focus()
 			}
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "enter":
-			return m, tea.Batch(
-				tea.Printf("Name: %s Path: %s", m.table.SelectedRow()[0], m.table.SelectedRow()[1]),
-			)
-
+			m.addToggle = false
+		case "a":
+			m.addToggle = true
+			m.table.Blur()
 		}
 	}
+	cmdAdd = m.updateInputs(msg)
 	m.table, cmd = m.table.Update(msg)
-	return m, cmd
+
+	return m, tea.Batch(cmd, cmdAdd)
 }
 
 func (m Model) View() string {
-	return baseStyle.Render(m.table.View()) + "\n"
+	var sb strings.Builder
+	sb.WriteString(baseStyle.Render(m.table.View()) + "\n")
+
+	if m.addToggle {
+		for i := range m.inputs {
+			sb.WriteString(m.inputs[i].View())
+			if i < len(m.inputs)-1 {
+				sb.WriteRune('\n')
+			}
+		}
+	}
+	return sb.String()
 }
 
 func main() {
