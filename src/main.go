@@ -7,27 +7,20 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-type bookmark struct {
-	name string
-	path string
-}
-
 type Model struct {
 	// -- table of bookmarks
-	bookmarks []bookmark
-	cursor    int
-	table     table.Model
+	cursor      int
+	table       table.Model
+	tableActive bool
 	//-- New Bookmark text input
 	focusIndex int
 	inputs     []textinput.Model
-	cursorMode cursor.Mode
 	addToggle  bool
 }
 
@@ -46,7 +39,7 @@ func initialModel() Model {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var bookmarks []bookmark
+
 	var rows []table.Row
 	for _, record := range records {
 		rows = append(rows, table.Row{
@@ -94,12 +87,12 @@ func initialModel() Model {
 	inputs = append(inputs, ti)
 
 	return Model{
-		bookmarks:  bookmarks,
-		cursor:     0,
-		table:      t,
-		inputs:     inputs,
-		focusIndex: 0,
-		addToggle:  false,
+		cursor:      0,
+		table:       t,
+		tableActive: true,
+		inputs:      inputs,
+		focusIndex:  0,
+		addToggle:   false,
 	}
 }
 
@@ -122,26 +115,47 @@ func (m *Model) updateInputs(msg tea.Msg) tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmdAdd tea.Cmd
+	var update bool = true
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc":
-			if m.table.Focused() {
-				m.table.Blur()
-				m.inputs[0].Focus()
-			} else {
-				m.table.Focus()
-			}
+
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "enter":
-			m.addToggle = false
+
 		case "a":
 			m.addToggle = true
-			m.table.Blur()
+			m.inputs[0].Focus()
+			m.tableActive = false
+			update = false
+		case "enter":
+			if m.addToggle {
+				if m.focusIndex == 0 {
+					m.focusIndex++
+					m.inputs[m.focusIndex].Focus()
+					if m.focusIndex > 0 {
+						m.inputs[m.focusIndex-1].Blur()
+					}
+				} else {
+					m.table.SetRows(append(m.table.Rows(), []string{m.inputs[0].Value(), m.inputs[1].Value()}))
+					m.inputs[0].Reset()
+					m.inputs[1].Reset()
+					m.tableActive = true
+					m.addToggle = false
+				}
+
+			}
+
 		}
 	}
-	cmdAdd = m.updateInputs(msg)
+	if m.tableActive {
+		m.table.Focus()
+	} else {
+		m.table.Blur()
+	}
+	if update {
+		cmdAdd = m.updateInputs(msg)
+	}
 	m.table, cmd = m.table.Update(msg)
 
 	return m, tea.Batch(cmd, cmdAdd)
