@@ -2,5 +2,5 @@
 if %1==tp (
     cd %2
 ) else (
-    echo "path2"
+    main.exe 
 )
