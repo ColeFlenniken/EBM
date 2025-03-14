@@ -29,7 +29,7 @@ var baseStyle = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("240"))
 
 func initialModel() Model {
-	f, err := os.Open("bm.csv")
+	f, err := os.Open("C:\\Users\\f8col\\OneDrive\\Desktop\\Projects\\EBM\\src\\bm.csv")
 	if err != nil {
 		log.Fatal(err)
 	}
