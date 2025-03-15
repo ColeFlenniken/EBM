@@ -132,6 +132,7 @@ func (m *Model) inputModeUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "enter":
+			log.Default().Print(m.inputs[m.focusIndex].Value())
 			m.AdvanceInput()
 
 		}
@@ -142,7 +143,7 @@ func (m *Model) inputModeUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmd, cmdAdd)
 }
 func (m *Model) AdvanceInput() bool {
-	if m.focusIndex < len(m.inputs)-1 && m.inputs[m.focusIndex].Value() != "" {
+	if m.focusIndex < len(m.inputs)-1 && strings.Trim(m.inputs[m.focusIndex].Value(), " ") != "" {
 
 		m.inputs[m.focusIndex].Blur()
 		m.focusIndex += 1
@@ -157,7 +158,9 @@ func (m *Model) AdvanceInput() bool {
 	m.table.SetRows(append(m.table.Rows(), []string{m.inputs[0].Value(), m.inputs[1].Value()}))
 	saveFile(m.table.Rows())
 	m.ResetInput()
+	log.Default().Println("F")
 	m.table.Focus()
+	m.focusIndex = 0
 	m.inputMode = false
 	return true
 
@@ -188,6 +191,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "a":
 				m.inputMode = true
 				m.inputs[0].Focus()
+				m.table.Blur()
 				update = false
 			case "r":
 				if len(m.table.Rows()) > 0 {
@@ -201,11 +205,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-	}
-	if !m.inputMode {
-		m.table.Focus()
-	} else {
-		m.table.Blur()
 	}
 	if update {
 		cmdAdd = m.updateInputs(msg)
