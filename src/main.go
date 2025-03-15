@@ -22,6 +22,8 @@ type Model struct {
 	focusIndex int
 	inputs     []textinput.Model
 	addToggle  bool
+	//--
+	kill bool
 }
 
 var baseStyle = lipgloss.NewStyle().
@@ -93,7 +95,25 @@ func initialModel() Model {
 		inputs:      inputs,
 		focusIndex:  0,
 		addToggle:   false,
+		kill:        false,
 	}
+}
+func saveFile(bookmarks []table.Row) error {
+	f, err := os.Create("C:\\Users\\f8col\\OneDrive\\Desktop\\Projects\\EBM\\src\\bm.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	var sb strings.Builder
+	for i := range len(bookmarks) {
+		sb.WriteString(bookmarks[i][0] + "," + bookmarks[i][1] + "\n")
+	}
+	_, err = f.Write([]byte(sb.String()))
+	if err != nil {
+		log.Fatal(err)
+
+	}
+	return err
 }
 
 func (m Model) Init() tea.Cmd {
@@ -142,6 +162,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.inputs[1].Reset()
 					m.tableActive = true
 					m.addToggle = false
+					saveFile(m.table.Rows())
 				}
 
 			}
@@ -162,9 +183,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+
 	var sb strings.Builder
 	sb.WriteString(baseStyle.Render(m.table.View()) + "\n")
-
+	sb.WriteString("a: add bookmark d: delete bookmark enter:  submit addition\n")
 	if m.addToggle {
 		for i := range m.inputs {
 			sb.WriteString(m.inputs[i].View())
@@ -179,7 +201,7 @@ func (m Model) View() string {
 func main() {
 
 	m := initialModel()
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
