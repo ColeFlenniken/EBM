@@ -15,15 +15,11 @@ import (
 
 type Model struct {
 	// -- table of bookmarks
-	cursor      int
-	table       table.Model
-	tableActive bool
+	table table.Model
 	//-- New Bookmark text input
 	focusIndex int
 	inputs     []textinput.Model
-	addToggle  bool
-	//--
-	kill bool
+	inputMode  bool
 }
 
 var baseStyle = lipgloss.NewStyle().
@@ -89,13 +85,10 @@ func initialModel() Model {
 	inputs = append(inputs, ti)
 
 	return Model{
-		cursor:      0,
-		table:       t,
-		tableActive: true,
-		inputs:      inputs,
-		focusIndex:  0,
-		addToggle:   false,
-		kill:        false,
+		table:      t,
+		inputs:     inputs,
+		focusIndex: 0,
+		inputMode:  false,
 	}
 }
 func saveFile(bookmarks []table.Row) error {
@@ -132,57 +125,84 @@ func (m *Model) updateInputs(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+func (m *Model) inputModeUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "enter":
+			m.AdvanceInput()
+
+		}
+	}
+	//placeholder to remove compile error
+	var cmd tea.Cmd
+	var cmdAdd tea.Cmd
+	return m, tea.Batch(cmd, cmdAdd)
+}
+func (m *Model) AdvanceInput() bool {
+	if m.focusIndex < len(m.inputs)-1 && m.inputs[m.focusIndex].Value() != "" {
+
+		m.inputs[m.focusIndex].Blur()
+		m.focusIndex += 1
+		m.inputs[m.focusIndex].Focus()
+		return false
+	}
+
+	if m.inputs[m.focusIndex].Value() == "" {
+
+		return false
+	}
+	m.table.SetRows(append(m.table.Rows(), []string{m.inputs[0].Value(), m.inputs[1].Value()}))
+	saveFile(m.table.Rows())
+	m.ResetInput()
+	m.table.Focus()
+	m.inputMode = false
+	return true
+
+}
+func (m *Model) ResetInput() {
+	for i := range len(m.inputs) {
+		m.inputs[i].Reset()
+		m.inputs[i].Blur()
+	}
+	m.inputMode = false
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmdAdd tea.Cmd
 	var update bool = true
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
 
-		case "ctrl+c", "q":
-			return m, tea.Quit
+	if m.inputMode {
+		m.inputModeUpdate(msg)
+	} else {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
 
-		case "a":
-			m.addToggle = true
-			m.inputs[0].Focus()
-			m.tableActive = false
-			update = false
-		case "r":
-			if len(m.table.Rows()) > 0 {
-				var currNdx int = m.table.Cursor()
-				m.table.SetRows(append(m.table.Rows()[:m.table.Cursor()], m.table.Rows()[m.table.Cursor()+1:]...))
+			case "ctrl+c", "q":
+				return m, tea.Quit
 
-				if currNdx == len(m.table.Rows()) {
-					m.table.SetCursor(currNdx - 1)
-				}
-				saveFile(m.table.Rows())
-
-			}
-		case "enter":
-			if m.addToggle {
-				if m.focusIndex == 0 {
-					m.focusIndex++
-					m.inputs[m.focusIndex].Focus()
-					if m.focusIndex > 0 {
-						m.inputs[m.focusIndex-1].Blur()
+			case "a":
+				m.inputMode = true
+				m.inputs[0].Focus()
+				update = false
+			case "r":
+				if len(m.table.Rows()) > 0 {
+					var currNdx int = m.table.Cursor()
+					m.table.SetRows(append(m.table.Rows()[:m.table.Cursor()], m.table.Rows()[m.table.Cursor()+1:]...))
+					if currNdx == len(m.table.Rows()) {
+						m.table.SetCursor(currNdx - 1)
 					}
-				} else {
-					m.table.SetRows(append(m.table.Rows(), []string{m.inputs[0].Value(), m.inputs[1].Value()}))
-					if m.inputs[0].Value() != "" && m.inputs[1].Value() != "" {
-						saveFile(m.table.Rows())
-					}
-					m.inputs[0].Reset()
-					m.inputs[1].Reset()
-					m.tableActive = true
-					m.addToggle = false
+					saveFile(m.table.Rows())
+
 				}
-
 			}
-
 		}
 	}
-	if m.tableActive {
+	if !m.inputMode {
 		m.table.Focus()
 	} else {
 		m.table.Blur()
@@ -199,8 +219,8 @@ func (m Model) View() string {
 
 	var sb strings.Builder
 	sb.WriteString(baseStyle.Render(m.table.View()) + "\n")
-	sb.WriteString("a: add bookmark d: delete bookmark enter:  submit addition\n")
-	if m.addToggle {
+	sb.WriteString("a: add bookmark r: delete bookmark enter:  submit addition\n")
+	if m.inputMode {
 		for i := range m.inputs {
 			sb.WriteString(m.inputs[i].View())
 			if i < len(m.inputs)-1 {
