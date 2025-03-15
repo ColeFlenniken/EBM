@@ -148,6 +148,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inputs[0].Focus()
 			m.tableActive = false
 			update = false
+		case "r":
+			if len(m.table.Rows()) > 0 {
+				var currNdx int = m.table.Cursor()
+				m.table.SetRows(append(m.table.Rows()[:m.table.Cursor()], m.table.Rows()[m.table.Cursor()+1:]...))
+
+				if currNdx == len(m.table.Rows()) {
+					m.table.SetCursor(currNdx - 1)
+				}
+				saveFile(m.table.Rows())
+
+			}
 		case "enter":
 			if m.addToggle {
 				if m.focusIndex == 0 {
@@ -158,11 +169,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				} else {
 					m.table.SetRows(append(m.table.Rows(), []string{m.inputs[0].Value(), m.inputs[1].Value()}))
+					if m.inputs[0].Value() != "" && m.inputs[1].Value() != "" {
+						saveFile(m.table.Rows())
+					}
 					m.inputs[0].Reset()
 					m.inputs[1].Reset()
 					m.tableActive = true
 					m.addToggle = false
-					saveFile(m.table.Rows())
 				}
 
 			}
