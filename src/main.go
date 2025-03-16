@@ -125,12 +125,12 @@ func (m *Model) updateInputs(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m *Model) inputModeUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) inputModeUpdate(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
-			return m, tea.Quit
+			return tea.Quit
 		case "enter":
 			log.Default().Print(m.inputs[m.focusIndex].Value())
 			m.AdvanceInput()
@@ -138,13 +138,10 @@ func (m *Model) inputModeUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	//placeholder to remove compile error
-	var cmd tea.Cmd
-	var cmdAdd tea.Cmd
-	return m, tea.Batch(cmd, cmdAdd)
+	return nil
 }
 func (m *Model) AdvanceInput() bool {
 	if m.focusIndex < len(m.inputs)-1 && strings.Trim(m.inputs[m.focusIndex].Value(), " ") != "" {
-
 		m.inputs[m.focusIndex].Blur()
 		m.focusIndex += 1
 		m.inputs[m.focusIndex].Focus()
@@ -152,13 +149,11 @@ func (m *Model) AdvanceInput() bool {
 	}
 
 	if m.inputs[m.focusIndex].Value() == "" {
-
 		return false
 	}
 	m.table.SetRows(append(m.table.Rows(), []string{m.inputs[0].Value(), m.inputs[1].Value()}))
 	saveFile(m.table.Rows())
 	m.ResetInput()
-	log.Default().Println("F")
 	m.table.Focus()
 	m.focusIndex = 0
 	m.inputMode = false
@@ -175,11 +170,14 @@ func (m *Model) ResetInput() {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	var cmdAdd tea.Cmd
+
 	var update bool = true
 
 	if m.inputMode {
-		m.inputModeUpdate(msg)
+		var cmdAdd tea.Cmd = m.inputModeUpdate(msg)
+		if cmdAdd != nil {
+			return m, tea.Quit
+		}
 	} else {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
@@ -206,12 +204,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	}
-	if update {
-		cmdAdd = m.updateInputs(msg)
-	}
 	m.table, cmd = m.table.Update(msg)
+	if update {
+		cmd = tea.Batch(cmd, m.updateInputs(msg))
+	}
 
-	return m, tea.Batch(cmd, cmdAdd)
+	return m, cmd
 }
 
 func (m Model) View() string {
