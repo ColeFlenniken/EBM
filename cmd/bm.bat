@@ -1,6 +1,6 @@
  
 @echo off
-
+echo %CD%
 if "%~1"=="" (
     echo "Please pass a parameter"
     exit /b
@@ -9,7 +9,15 @@ IF "%~1"=="view" (
     C:\Users\f8col\OneDrive\Desktop\Projects\EBM\src\src.exe
     exit /b
 )
- 
+IF "%~1"=="add" (
+    echo "JIO"
+    IF "%~2"=="" (
+        echo Missing bookmark name
+        exit /b
+    )
+    echo %~2,%CD% >> "C:\Users\f8col\OneDrive\Desktop\Projects\EBM\src\bm.csv" 
+    exit /b
+)
   
 set "key=%~1"
 set "value="
