@@ -27,7 +27,7 @@ var baseStyle = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("240"))
 
 func initialModel() Model {
-	f, err := os.Open("C:\\Users\\f8col\\OneDrive\\Desktop\\Projects\\EBM\\src\\bm.csv")
+	f, err := os.Open("C:\\Users\\f8col\\OneDrive\\Desktop\\Projects\\EBM\\cmd\\bm.csv")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func initialModel() Model {
 	}
 }
 func saveFile(bookmarks []table.Row) error {
-	f, err := os.Create("C:\\Users\\f8col\\OneDrive\\Desktop\\Projects\\EBM\\src\\bm.csv")
+	f, err := os.Create("C:\\Users\\f8col\\OneDrive\\Desktop\\Projects\\EBM\\cmd\\bm.csv")
 	if err != nil {
 		log.Fatal(err)
 	}

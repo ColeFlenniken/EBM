@@ -6,16 +6,15 @@ if "%~1"=="" (
     exit /b
 )
 IF "%~1"=="view" (
-    C:\Users\f8col\OneDrive\Desktop\Projects\EBM\src\src.exe
+    src.exe
     exit /b
 )
 IF "%~1"=="add" (
-    echo "JIO"
     IF "%~2"=="" (
         echo Missing bookmark name
         exit /b
     )
-    echo %~2,%CD% >> "C:\Users\f8col\OneDrive\Desktop\Projects\EBM\src\bm.csv" 
+    echo %~2,%CD% >> "C:\Users\f8col\OneDrive\Desktop\Projects\EBM\cmd\bm.csv" 
     exit /b
 )
   
@@ -23,7 +22,7 @@ set "key=%~1"
 set "value="
 
 REM Loop through each line in the CSV file
-for /f "tokens=1-2 delims=," %%A in (C:\Users\f8col\OneDrive\Desktop\Projects\EBM\src\bm.csv) do (
+for /f "tokens=1-2 delims=," %%A in (C:\Users\f8col\OneDrive\Desktop\Projects\EBM\cmd\bm.csv) do (
     if "%%A"=="%key%" (
         set "value=%%B"
         goto :found
