@@ -55,7 +55,7 @@ func initialModel() Model {
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(7),
+		table.WithHeight(10),
 	)
 
 	s := table.DefaultStyles()
@@ -80,7 +80,7 @@ func initialModel() Model {
 	inputs = append(inputs, ti)
 	ti = textinput.New()
 	ti.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	ti.CharLimit = 20
+	ti.CharLimit = 200
 	ti.Placeholder = "Path"
 	inputs = append(inputs, ti)
 
